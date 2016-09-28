@@ -1,0 +1,66 @@
+---
+ - hosts: cloudera
+   remote_user: root
+   tasks:
+   - include_vars: vars.yml
+   - name: Installing mysql
+     yum: name=mysql-server state=latest
+   - name: Stopping the mysql server
+     service: name=mysqld state=stopped
+   - name: installing mysql-connector-java
+     yum: name=mysql-connector-java state=latest
+   - name: Copying the my.cnf file
+     copy: src={{ files_location }}/my.cnf dest=/etc/my.cnf force=yes
+   - name: Turning on myqld forever
+     command: /sbin/chkconfig mysqld on
+   - service: name=mysqld state=started
+   - copy: src={{ files_location }}/my.cnf.passwordless dest=/root/.my.cnf
+   - yum: name=MySQL-python state=installed
+   - name: update mysql root password for all root accounts
+     mysql_user: name=root host={{ item }} password=
+     with_items:
+        -  localhost
+   - name: Create databases
+     mysql_db: name={{item}} state=present collation=utf8_general_ci encoding=utf8
+     with_items:
+      - amon
+      - rman
+      - hive
+      - sentry
+      - nav
+      - navms
+      - hue
+      - oozie
+      - scm
+   - name: Add deploy DB user and allow access to databases
+     mysql_user: name={{ item.name }} password={{ item.password }} host="localhost" priv={{ item.name }}.*:ALL/{{ item.name }}.*:ALL,GRANT state=present
+     with_items:
+       - { name: "amon", password: "amon" }
+       - { name: "rman", password: "rman" }
+       - { name: "hive", password: "hive" }
+       - { name: "sentry", password: "sentry" }
+       - { name: "nav", password: "nav" }
+       - { name: "navms", password: "navms" }
+       - { name: "hue", password: "hue" }
+       - { name: "oozie", password: "oozie" }
+       - { name: "scm", password: "scm" }
+
+   - name: Add deploy DB user and allow access to databases
+     mysql_user: name={{ item.name }} password={{ item.password }} host="%" priv={{ item.name }}.*:ALL/{{ item.name }}.*:ALL,GRANT state=present
+     with_items:
+        - { name: "amon", password: "amon" }
+        - { name: "rman", password: "rman" }
+        - { name: "hive", password: "hive" }
+        - { name: "sentry", password: "sentry" }
+        - { name: "nav", password: "nav" }
+        - { name: "navms", password: "navms" }
+        - { name: "hue", password: "hue" }
+        - { name: "oozie", password: "oozie" }
+        - { name: "scm", password: "scm" }
+
+   - name: Check if scm database exists
+     shell: mysql -e "use scm;"
+     ignore_errors: True
+     register: prepared_scm
+ 
+

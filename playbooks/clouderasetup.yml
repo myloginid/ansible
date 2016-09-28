@@ -1,0 +1,23 @@
+---
+- hosts: cloudera
+  remote_user: root
+  tasks:
+  - include_vars: vars.yml
+  - name: Install Cloudera Manager Repository
+    template: src={{ files_location }}/cloudera.repo dest=/etc/yum.repos.d/cloudera-manager.repo owner=root group=root mode=0644
+  - name: install the latest version of java
+    yum: name=oracle-j2sdk1.7 state=latest  
+  - name: install CM server
+    action: yum pkg={{ item }} state=latest
+    with_items:
+     - cloudera-manager-daemons
+     - cloudera-manager-server
+  - name: start cloudera-scm-server
+    service: name=cloudera-scm-server state=started
+    ignore_errors: True
+  - name: upgrade all packages
+    yum: name=* state=latest
+  - name: Writing contents to db.conf
+    copy: src={{ files_location }}/db.properties dest=/etc/cloudera-scm-server/db.properties force=yes owner=cloudera-scm group=cloudera-scm mode=0644
+  - name: checking cloudera-scm-server status
+    service: name=cloudera-scm-server state=restarted

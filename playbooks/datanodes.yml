@@ -1,0 +1,137 @@
+  
+---
+- hosts: all
+  remote_user: root
+  tasks:
+
+  - name: upgrade all packages
+    yum: name=* state=latest
+  - name: checking kernal version
+    shell: uname -r
+  - name: ensure ntp is at the latest version
+    yum: name=ntp state=latest
+  - name: Starting the ntpd if stopped
+    service: name=ntpd state=started
+  - name: Stopping iptables
+    service: name={{ item }} state=stopped
+    with_items:
+      - iptables
+      - ip6tables
+      - postfix
+  - name: stopping iptable on server start
+    shell: chkconfig iptables off
+    ignore_errors: True
+  - name: Disabling selinux
+    command: setenforce 0
+    ignore_errors: True
+  - name: checking selinux status
+    lineinfile: dest=/etc/selinux/config regexp=^SELINUX= line=SELINUX=disabled
+  - name: Check whether transparent pages are off
+    command: grep -i "HugePages_Total" /proc/meminfo
+    register: checkmyconf
+    always_run: True
+    ignore_errors: True
+    changed_when: False
+  - name: copy to rc.local to remain same at reboots
+    blockinfile:
+      dest: /etc/rc.local
+      block: |
+        echo never > /sys/kernel/mm/redhat_transparent_hugepage/enabled
+        echo never > /sys/kernel/mm/redhat_transparent_hugepage/defrag
+  - name:  Copying the sysctl.conf to remote machine
+    blockinfile:
+      dest: /etc/sysctl.conf
+      block: |
+        #cloudera configs
+        vm.swappiness = 1
+        vm.overcommit_memory = 1
+        vm.overcommit_ratio = 50
+        net.ipv4.ip_local_port_range = 1024 65535
+        net.ipv4.tcp_tw_recycle = 1
+        net.ipv4.tcp_tw_reuse = 1
+        net.ipv4.tcp_syncookies = 1
+        net.ipv4.tcp_sack = 1
+        net.ipv4.tcp_timestamps = 1
+        net.ipv4.tcp_mtu_probing=1
+        net.ipv4.tcp_max_syn_backlog = 8096
+        net.core.netdev_max_backlog = 30000
+        net.core.somaxconn = 4096
+        net.core.rmem_max = 4194304
+        net.core.rmem_default = 4194304
+        net.core.wmem_max = 4194304
+        net.core.wmem_default = 65536
+        net.ipv4.tcp_rmem =  4096 87380 3355442
+        net.ipv4.tcp_wmem = 4096 65536 3355442
+        net.ipv4.tcp_mem = 67108864 67108864 67108864
+        net.ipv4.route.flush=1
+        net.ipv4.tcp_adv_win_scale=1
+  - name: Writing contents to limit.conf
+    #copy: src=/root/ansible-playbook/files/limits.conf dest=/etc/security/limits.conf force=yes owner=root group=root mode=0644
+    blockinfile:
+      dest: /etc/sysctl.conf
+      block: |
+        #cloudera configs
+        cloudera-scm    soft  nofile  32768
+        cloudera-scm    soft  nproc   65536
+        cloudera-scm    hard  nofile  1048576
+        cloudera-scm    hard  nproc   unlimited
+        cloudera-scm    hard  memlock unlimited
+        hbase    soft  nofile  32768
+        hbase    soft  nproc   65536
+        hbase    hard  nofile  1048576
+        hbase    hard  nproc   unlimited
+        hbase    hard  memlock unlimited
+        impala    soft  nofile  32768
+        impala    soft  nproc   65536
+        impala    hard  nofile  1048576
+        impala    hard  nproc   unlimited
+        impala    hard  memlock unlimited
+        solr    soft  nofile  32768
+        solr    soft  nproc   65536
+        solr    hard  nofile  1048576
+        solr    hard  nproc   unlimited
+        solr    hard  memlock unlimited
+        hive    soft  nofile  32768
+        hive    soft  nproc   65536
+        hive    hard  nofile  1048576
+        hive    hard  nproc   unlimited
+        hive    hard  memlock unlimited
+        yarn    soft  nofile  32768
+        yarn    soft  nproc   65536
+        yarn    hard  nofile  1048576
+        yarn    hard  nproc   unlimited
+        yarn    hard  memlock unlimited
+        hdfs    soft  nofile  32768
+        hdfs    soft  nproc   65536
+        hdfs    hard  nofile  1048576
+        hdfs    hard  nproc   unlimited
+        oozie    soft  nofile  32768
+        oozie    soft  nproc   65536
+        oozie    hard  nofile  1048576
+        oozie    hard  nproc   unlimited
+        sqoop2    soft  nofile  32768
+        sqoop2    soft  nproc   65536
+        sqoop2    hard  nofile  1048576
+        sqoop2    hard  nproc   unlimited
+        kafka    soft  nofile  32768
+        kafka    soft  nproc   65536
+        kafka    hard  nofile  1048576
+        kafka    hard  nproc   unlimited
+        sentry    soft  nofile  32768
+        sentry    soft  nproc   65536
+        sentry    hard  nofile  1048576
+        sentry    hard  nproc   unlimited
+        hue    soft  nofile  32768
+        hue    soft  nproc   65536
+        hue    hard  nofile  1048576
+        hue    hard  nproc   unlimited
+        zookeeper    soft  nofile  32768
+        zookeeper    soft  nproc   65536
+        zookeeper    hard  nofile  1048576
+        zookeeper    hard  nproc   unlimited
+        zookeeper    hard  memlock unlimited
+  - name: install CM server
+    action: yum pkg={{ item }} state=latest
+    with_items:
+     - cloudera-manager-daemons
+     - cloudera-manager-agents 
