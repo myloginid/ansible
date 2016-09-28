@@ -1,6 +1,4 @@
 [cloudera]
-10.138.97.41
-10.138.97.42
+#some host ips
 [regular_nodes]
-10.138.97.37
-10.138.97.38
+#some host ips
