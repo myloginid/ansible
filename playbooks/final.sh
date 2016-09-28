@@ -38,7 +38,7 @@ fi
 for playbook in preinstall.yml mysqlsetup.yml clouderasetup.yml
 do
 echo ${playbook}
-#ansible-playbook  ${playbook} -i ${HOSTS_FILE}
+ansible-playbook  ${playbook} -i ${HOSTS_FILE}
 done
 
 #echo "Running pre-check on all machines"
@@ -57,4 +57,4 @@ fi
 echo "checkign the cloudera service status on ${IP}"
 ssh root@${IP} "service cloudera-scm-server status"
 done
-fi
+
